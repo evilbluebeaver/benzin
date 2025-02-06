@@ -1,0 +1,51 @@
+[package]
+name = "benzin"
+version = "0.1.0"
+authors = ["Kirill Kindiuk <evilbluebeaver@gmail.com>"]
+edition = "2021"
+autotests = false
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/evilbluebeaver/benzin"
+keywords = ["orm", "database", "sql", "async"]
+categories = ["database"]
+description = "An async extension for Diesel the safe, extensible ORM and Query Builder"
+rust-version = "1.65.0"
+
+[dependencies]
+diesel = { version = "2.2", default-features = false, features = ["i-implement-a-third-party-backend-and-opt-into-breaking-changes"]}
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+tokio-postgres = { version = "0.7", optional = true}
+tokio = { version = "1.42", optional = true}
+mysql_async = { version = "0.35", optional = true, default-features = false, features = ["minimal", "derive"] }
+mysql_common = {version = "0.34", optional = true, default-features = false, features = ["frunk", "derive"]}
+
+bb8 = {version = "0.9", optional = true}
+deadpool = {version = "0.12", optional = true, default-features = false, features = ["managed"] }
+thiserror = "2.0"
+
+[dev-dependencies]
+tokio = {version = "1.43", features = ["rt", "macros"]}
+chrono = "0.4"
+diesel = { version = "2.2", default-features = false,  features = ["chrono"]}
+
+[features]
+default = []
+mysql = ["diesel/mysql_backend", "mysql_async", "mysql_common", "tokio"]
+postgres = ["diesel/postgres_backend", "tokio-postgres", "tokio", "tokio/rt", "tokio/macros"]
+
+[[test]]
+name = "integration_tests"
+path = "tests/lib.rs"
+harness = true
+
+[package.metadata.docs.rs]
+features = ["postgres", "mysql", "deadpool", "bb8"]
+no-default-features = true
+rustc-args = ["--cfg", "doc_cfg"]
+rustdoc-args = ["--cfg", "doc_cfg"]
+
+[workspace]
+members = [
+        ".",
+]
