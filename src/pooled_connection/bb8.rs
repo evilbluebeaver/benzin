@@ -54,11 +54,14 @@ where
             .await
             .map_err(PoolError::ConnectionError)
     }
-    async fn is_valid(&self, _conn: &mut Self::Connection) -> Result<(), Self::Error> {
+    async fn is_valid(&self, conn: &mut Self::Connection) -> Result<(), Self::Error> {
+        if conn.is_broken() {
+            return Err(super::PoolError::DisconnectionError);
+        }
         Ok(())
     }
 
-    fn has_broken(&self, _conn: &mut Self::Connection) -> bool {
-        false
+    fn has_broken(&self, conn: &mut Self::Connection) -> bool {
+        conn.is_broken()
     }
 }

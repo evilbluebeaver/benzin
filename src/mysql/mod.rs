@@ -44,6 +44,7 @@ use self::{error_helper::ErrorHelper, row::MysqlRow, serialize::ToSqlHelper};
 pub struct AsyncMysqlConnection {
     conn: mysql_async::Conn,
     cache: MysqlCache,
+    is_broken: bool,
 }
 
 impl AsyncExecute for AsyncMysqlConnection {
@@ -52,7 +53,15 @@ impl AsyncExecute for AsyncMysqlConnection {
     type Backend = Mysql;
 
     async fn batch_execute(&mut self, query: &str) -> diesel::QueryResult<()> {
-        Ok(self.conn.query_drop(query).await.map_err(ErrorHelper)?)
+        Ok(self
+            .conn
+            .query_drop(query)
+            .await
+            // TODO try to do this better in all the places
+            .inspect_err(|e| {
+                self.is_broken = e.is_fatal();
+            })
+            .map_err(ErrorHelper)?)
     }
 
     async fn load<T>(&mut self, source: T) -> QueryResult<Self::Stream<'_>>
@@ -70,7 +79,13 @@ impl AsyncExecute for AsyncMysqlConnection {
                     .conn
                     .exec_stream(stmt, binds)
                     .await
+                    .inspect_err(|e| {
+                        self.is_broken = e.is_fatal();
+                    })
                     .map_err(ErrorHelper)?
+                    .inspect_err(|e| {
+                        self.is_broken = e.is_fatal();
+                    })
                     .map_err(|e| diesel::result::Error::from(ErrorHelper(e)));
                 Ok(stream.boxed())
             }
@@ -79,7 +94,13 @@ impl AsyncExecute for AsyncMysqlConnection {
                     .with(binds)
                     .stream(&mut self.conn)
                     .await
+                    .inspect_err(|e| {
+                        self.is_broken = e.is_fatal();
+                    })
                     .map_err(ErrorHelper)?
+                    .inspect_err(|e| {
+                        self.is_broken = e.is_fatal();
+                    })
                     .map_err(|e| diesel::result::Error::from(ErrorHelper(e)));
                 Ok(stream.boxed())
             }
@@ -99,12 +120,18 @@ impl AsyncExecute for AsyncMysqlConnection {
                 self.conn
                     .exec_drop(stmt, binds)
                     .await
+                    .inspect_err(|e| {
+                        self.is_broken = e.is_fatal();
+                    })
                     .map_err(ErrorHelper)?;
             }
             CachedStatement::Raw(query) => query
                 .with(binds)
                 .ignore(&mut self.conn)
                 .await
+                .inspect_err(|e| {
+                    self.is_broken = e.is_fatal();
+                })
                 .map_err(ErrorHelper)?,
         }
         Ok(self.conn.affected_rows() as usize)
@@ -131,7 +158,11 @@ impl AsyncConnection for AsyncMysqlConnection {
         Ok(AsyncMysqlConnection {
             conn,
             cache: MysqlCache::new(),
+            is_broken: false,
         })
+    }
+    fn is_broken(&self) -> bool {
+        self.is_broken
     }
 }
 
@@ -145,9 +176,16 @@ impl AsyncTransactional for AsyncMysqlConnection {
             .conn
             .start_transaction(TxOpts::default())
             .await
+            .inspect_err(|e| {
+                self.is_broken = e.is_fatal();
+            })
             .map_err(ErrorHelper)?;
         let cache = &mut self.cache;
-        Ok(AsyncMysqlTransaction { transaction, cache })
+        Ok(AsyncMysqlTransaction {
+            transaction,
+            cache,
+            is_broken: &mut self.is_broken,
+        })
     }
 }
 
@@ -161,6 +199,7 @@ impl AsyncMysqlConnection {
         let mut conn = AsyncMysqlConnection {
             conn,
             cache: MysqlCache::new(),
+            is_broken: false,
         };
 
         for stmt in CONNECTION_SETUP_QUERIES {

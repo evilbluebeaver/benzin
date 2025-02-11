@@ -28,7 +28,7 @@
 //! #     Ok(())
 //! # }
 //! ```
-use deadpool::managed::Manager;
+use deadpool::managed::{Manager, Metrics, RecycleError, RecycleResult};
 
 use super::AsyncDieselConnectionManager;
 use crate::AsyncConnection;
@@ -62,11 +62,10 @@ where
             .map_err(super::PoolError::ConnectionError)
     }
 
-    async fn recycle(
-        &self,
-        _obj: &mut Self::Type,
-        _: &deadpool::managed::Metrics,
-    ) -> deadpool::managed::RecycleResult<Self::Error> {
+    async fn recycle(&self, obj: &mut Self::Type, _: &Metrics) -> RecycleResult<Self::Error> {
+        if obj.is_broken() {
+            return Err(RecycleError::Backend(super::PoolError::DisconnectionError));
+        }
         Ok(())
     }
 }

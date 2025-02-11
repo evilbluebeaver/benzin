@@ -102,6 +102,9 @@ impl AsyncConnection for AsyncPgConnection {
 
         Self::setup(client).await
     }
+    fn is_broken(&self) -> bool {
+        self.conn.is_closed()
+    }
 }
 
 impl AsyncPgConnection {

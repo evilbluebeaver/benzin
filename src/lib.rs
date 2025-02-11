@@ -158,6 +158,9 @@ pub trait AsyncConnection: AsyncExecute {
     fn establish(
         database_url: &str,
     ) -> impl std::future::Future<Output = ConnectionResult<Self>> + Send;
+
+    /// Checks if the connection is broken
+    fn is_broken(&self) -> bool;
 }
 
 /// An async transactional entity

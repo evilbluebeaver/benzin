@@ -223,6 +223,9 @@ impl AsyncConnection for TestConnection {
     async fn establish(_database_url: &str) -> diesel::ConnectionResult<Self> {
         Ok(Self::default())
     }
+    fn is_broken(&self) -> bool {
+        false
+    }
 }
 
 impl FromSql<Text, TestBackend> for String {

@@ -17,13 +17,18 @@ pub mod deadpool;
 
 /// The error used when managing connections with `deadpool`.
 #[derive(thiserror::Error, Debug)]
-#[error(transparent)]
 pub enum PoolError {
     /// An error occurred establishing the connection
+    #[error(transparent)]
     ConnectionError(#[from] diesel::result::ConnectionError),
 
     /// An error occurred pinging the database
+    #[error(transparent)]
     QueryError(#[from] diesel::result::Error),
+
+    /// An error occured while recycling the connection
+    #[error("Connection is broken")]
+    DisconnectionError,
 }
 
 /// Type of the custom setup closure passed to [`ManagerConfig::custom_setup`]
