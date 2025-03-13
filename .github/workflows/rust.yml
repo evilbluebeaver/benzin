@@ -2,7 +2,8 @@ name: Rust
 
 on:
   push:
-    tags: "*"
+    tags:
+      - "*"
 
 env:
   CARGO_TERM_COLOR: always
@@ -21,4 +22,4 @@ jobs:
     - uses: ryohidaka/action-cargo-publish@v0.1.0
       with:
         token: ${{ secrets.CRATES_IO_TOKEN }}
-        dry-run: true
+        dry-run: false
