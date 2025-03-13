@@ -313,7 +313,8 @@ pub trait AsyncTransactional {
     where
         F: for<'t> FnOnce(
             &'t mut Self::Transaction<'a>,
-        ) -> Pin<Box<dyn std::future::Future<Output = Result<R, E>> + 't>>,
+        )
+            -> Pin<Box<dyn std::future::Future<Output = Result<R, E>> + Send + 't>>,
         E: From<diesel::result::Error>,
     {
         async {
