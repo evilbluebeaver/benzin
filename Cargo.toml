@@ -1,6 +1,6 @@
 [package]
 name = "benzin"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Kirill Kindiuk <evilbluebeaver@gmail.com>"]
 edition = "2021"
 autotests = false
